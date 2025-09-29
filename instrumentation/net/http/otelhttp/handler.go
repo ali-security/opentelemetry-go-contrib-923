@@ -27,6 +27,8 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil"
 )
 
 var _ http.Handler = &Handler{}
@@ -180,8 +182,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
-	// Add metrics
-	attributes := append(labeler.Get(), semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)...)
+	// Add metrics with sanitized HTTP method to prevent high cardinality
+	attributes := append(labeler.Get(), semconvutil.HTTPServerMetricAttributesFromHTTPRequestSafe(h.operation, r)...)
 	h.counters[RequestContentLength].Add(ctx, bw.read, attributes...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, attributes...)
 
